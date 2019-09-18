@@ -20,6 +20,7 @@ class MdioClock (private val mainFreq: Int,
     "target frequency must be less than mainFreq")
   assert(mainFreq%targetFreq == 0,
     "Main frequency must be a multiple of target frequency")
+
   val io = IO(new Bundle{
     val mdc = Output(Bool())
     val mdc_rise = Output(Bool())
@@ -47,49 +48,66 @@ class MdioClock (private val mainFreq: Int,
   io.mdc_fall := fallingedge(mdcReg)
 }
 
-class Mdio (private val mainFreq: Int) extends Module {
+class Mdio (private val mainFreq: Int,
+            private val targetFreq: Int) extends Module {
   val io = IO(new Bundle {
     val mdio = new MdioIf()
-    val phyadd = Flipped(Decoupled(UInt(3.W)))
-    val regadd = Flipped(Decoupled(UInt(5.W)))
+    val phyreg = Flipped(Decoupled(UInt((3+5).W)))
     val data_i = Flipped(Decoupled(UInt(16.W)))
     val data_o = Decoupled(UInt(16.W))
   })
 
-// Notes: MDIO format
-//     spbl   ssof srwo sphy  sreg sta      sdata       sidle
-//Read  32 1’s 01   10 00AAA RRRRR Z0 DDDDDDDD_DDDDDDDD Z
-//Write 32 1’s 01   01 00AAA RRRRR 10 DDDDDDDD_DDDDDDDD Z
+// Notes: MDIO format
+//           sheadaddr             sta     sdata        sidle
+//Read  32 1’s 01   10 00AAA RRRRR Z0  DDDDDDDD_DDDDDDDD Z
+//Write 32 1’s 01   01 00AAA RRRRR 10  DDDDDDDD_DDDDDDDD Z
 
-  val spbl::ssof::srwo::sphy::sreg::sta::sdata::sidle::Nil = Enum(8)
+  val preamble = "1"*32
+  val startOfFrame = "01"
+  val readOPCode = "10"
+  val writeOPCode = "01"
+  val readHeader = ("b" + preamble + startOfFrame + readOPCode).U
+  val writeHeader= ("b" + preamble + startOfFrame + writeOPCode).U
+
+  val mdioClock = Module(new MdioClock(mainFreq, targetFreq))
+  //      0        1     2       3     4      5 
+  val sheadaddr::srta::srdata::swta::swdata::sidle::Nil = Enum(6)
   val stateReg = RegInit(sidle)
 
+  val preambleCount = RegInit(32.U)
+  val wrReg = RegInit(false.B)
+
   switch(stateReg){
-    is(sidle){ }
-    is(spbl ){ }
-    is(ssof ){ }
-    is(srwo ){ }
-    is(sphy ){ }
-    is(sreg ){ }
-    is(sta  ){ }
-    is(sdata){ }
+    is(sidle){
+    }
+    is(sheadaddr){ // send preamble on mdo
+    }
+    is(swta){
+    }
+    is(swdata){
+    }
+    is(srta){
+    }
+    is(srdata){
+    }
   }
+
+  io.mdio.mdir := 1.U
+
   //XXX: delete it
   io.mdio.mdc := 0.U
   io.mdio.mdo := 0.U
-  io.mdio.mdir:= 0.U
-  io.phyadd.ready := 0.U
-  io.regadd.ready := 0.U
+  io.phyreg.ready := 0.U
   io.data_o.bits := 0.U
   io.data_o.valid:= 0.U
   io.data_i.ready:= 0.U
-
 }
 
 
 object Mdio extends App {
   val mainClock = 50
+  val mdioClock = 1
   println(" Generating verilog sources")
   println(" Main clock frequency is " + mainClock + " Mhz")
-  chisel3.Driver.execute(Array[String](), () => new Mdio(mainClock))
+  chisel3.Driver.execute(Array[String](), () => new Mdio(mainClock, mdioClock))
 }

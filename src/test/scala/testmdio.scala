@@ -19,11 +19,12 @@ class TestMdioClock (dut: MdioClock) extends PeekPokeTester(dut) {
 
 object TestMdio extends App {
   val mainClock = 50
-  chisel3.iotesters.Driver.execute(args, () => new Mdio(mainClock)){
+  val mdioClock = 1
+  chisel3.iotesters.Driver.execute(args, () => new Mdio(mainClock, mdioClock)){
     c => new TestMdio(c)
   }
-//  chisel3.iotesters.Driver.execute(args, () => new MdioClock(mainClock, 5)){
-//    c => new TestMdioClock(c)
-//  }
+  chisel3.iotesters.Driver.execute(args, () => new MdioClock(mainClock, mdioClock)){
+    c => new TestMdioClock(c)
+  }
 
 }
