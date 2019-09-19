@@ -25,31 +25,40 @@ class MdioClock (val mainFreq: Int,
     val mdc = Output(Bool())
     val mdc_rise = Output(Bool())
     val mdc_fall = Output(Bool())
+    val enable = Input(Bool())
   })
 
   def risingedge(x: Bool) = x && !RegNext(x)
   def fallingedge(x: Bool) = !x && RegNext(x)
 
-  val mdcReg = RegInit(true.B)
+  val mdcReg = RegInit(false.B)
   val maxCount = mainFreq/targetFreq
   val halfMaxCount = maxCount/2
   val countReg = RegInit(0.U(log2Ceil(maxCount).W))
 
-  countReg := countReg + 1.U
-  when(countReg === (halfMaxCount.U - 1.U)){
-    mdcReg := 0.U
-  }.elsewhen(countReg === (maxCount.U - 1.U)){
-    mdcReg := 1.U
+  when(io.enable){
+    countReg := countReg + 1.U
+    when(countReg === (halfMaxCount.U - 1.U)){
+      mdcReg := 0.U
+    }.elsewhen(countReg === (maxCount.U - 1.U)){
+      mdcReg := 1.U
+      countReg := 0.U
+    }
+  }.otherwise{
     countReg := 0.U
+    mdcReg := 0.U
   }
 
   io.mdc := mdcReg
   io.mdc_rise := risingedge(mdcReg)
   io.mdc_fall := fallingedge(mdcReg)
+  when(risingedge(io.enable)){
+    io.mdc_fall := 1.U
+  }
 }
 
-class Mdio (private val mainFreq: Int,
-            private val targetFreq: Int) extends Module {
+class Mdio (val mainFreq: Int,
+            val targetFreq: Int) extends Module {
   val io = IO(new Bundle {
     val mdio = new MdioIf()
     val phyreg = Flipped(Decoupled(UInt((3+5).W)))
@@ -70,7 +79,9 @@ class Mdio (private val mainFreq: Int,
   val writeHeader= ("b" + preamble + startOfFrame + writeOPCode).U
 
   val mdioClock = Module(new MdioClock(mainFreq, targetFreq))
-  //      0        1     2       3     4      5 
+  mdioClock.io.enable := 0.U
+
+  //      0        1     2       3     4      5
   val sheadaddr::srta::srdata::swta::swdata::sidle::Nil = Enum(6)
   val stateReg = RegInit(sidle)
 
@@ -92,10 +103,11 @@ class Mdio (private val mainFreq: Int,
     }
   }
 
+
+  io.mdio.mdc := 0.U
   io.mdio.mdir := 1.U
 
   //XXX: delete it
-  io.mdio.mdc := 0.U
   io.mdio.mdo := 0.U
   io.phyreg.ready := 0.U
   io.data_o.bits := 0.U

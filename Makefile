@@ -7,10 +7,11 @@ hdl:
 	$(SBT) "runMain mdio.Mdio"
 
 test:
-	$(SBT) "test:runMain mdio.TestMdio $(BACKEND) $(VCD)"
+	$(SBT) "test:testOnly mdio.MdioSpec"
 
 testall:
 	$(SBT) "test:testOnly mdio.MdioSpec"
+	$(SBT) "test:testOnly mdio.MdioClockSpec"
 
 mrproper:
 	-rm *.anno.json
