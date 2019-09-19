@@ -14,8 +14,8 @@ class MdioIf extends Bundle {
 }
 
 // module that generate mdio clock (MDC)
-class MdioClock (private val mainFreq: Int,
-                 private val targetFreq: Int) extends Module{
+class MdioClock (val mainFreq: Int,
+                 val targetFreq: Int) extends Module{
   assert(mainFreq > targetFreq,
     "target frequency must be less than mainFreq")
   assert(mainFreq%targetFreq == 0,
@@ -109,5 +109,6 @@ object Mdio extends App {
   val mdioClock = 1
   println(" Generating verilog sources")
   println(" Main clock frequency is " + mainClock + " Mhz")
+  println(" MDC frequency is " + mdioClock + " Mhz")
   chisel3.Driver.execute(Array[String](), () => new Mdio(mainClock, mdioClock))
 }

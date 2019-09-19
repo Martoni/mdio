@@ -9,6 +9,9 @@ hdl:
 test:
 	$(SBT) "test:runMain mdio.TestMdio $(BACKEND) $(VCD)"
 
+testall:
+	$(SBT) "test:testOnly mdio.MdioSpec"
+
 mrproper:
 	-rm *.anno.json
 	-rm *.fir
