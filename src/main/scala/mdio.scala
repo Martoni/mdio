@@ -15,7 +15,8 @@ class MdioIf extends Bundle {
 
 // module that generate mdio clock (MDC)
 class MdioClock (val mainFreq: Int,
-                 val targetFreq: Int) extends Module{
+                 val targetFreq: Int,
+                 val maxPerCount: Int = 65) extends Module{
   assert(mainFreq > targetFreq,
     "target frequency must be less than mainFreq")
   assert(mainFreq%targetFreq == 0,
@@ -25,35 +26,49 @@ class MdioClock (val mainFreq: Int,
     val mdc = Output(Bool())
     val mdc_rise = Output(Bool())
     val mdc_fall = Output(Bool())
+    val per_count = Output(UInt(log2Ceil(maxPerCount+1).W))
     val enable = Input(Bool())
   })
 
-  def risingedge(x: Bool) = x && !RegNext(x)
-  def fallingedge(x: Bool) = !x && RegNext(x)
+  def risingedge(x: Bool) = x && !RegNext(x, true.B)
+  def fallingedge(x: Bool) = !x && RegNext(x, false.B)
 
   val mdcReg = RegInit(false.B)
+  val cValidReg = RegInit(false.B)
   val maxCount = mainFreq/targetFreq
   val halfMaxCount = maxCount/2
-  val countReg = RegInit(0.U(log2Ceil(maxCount).W))
+  val countReg = RegInit(0.U(log2Ceil(maxCount+1).W))
+  val periodCountReg = RegInit(0.U(log2Ceil(maxPerCount+1).W))
 
-  when(io.enable){
+
+  when(cValidReg){
     countReg := countReg + 1.U
     when(countReg === (halfMaxCount.U - 1.U)){
-      mdcReg := 0.U
+      mdcReg := false.B 
     }.elsewhen(countReg === (maxCount.U - 1.U)){
-      mdcReg := 1.U
+      mdcReg := true.B
       countReg := 0.U
     }
   }.otherwise{
     countReg := 0.U
-    mdcReg := 0.U
+    mdcReg := false.B
   }
 
   io.mdc := mdcReg
   io.mdc_rise := risingedge(mdcReg)
   io.mdc_fall := fallingedge(mdcReg)
+  io.per_count := periodCountReg
+  when(fallingedge(io.enable) ||
+    periodCountReg === maxPerCount.U){
+    cValidReg := false.B
+  }
   when(risingedge(io.enable)){
     io.mdc_fall := 1.U
+    periodCountReg := 0.U
+    cValidReg := true.B
+  }
+  when(risingedge(mdcReg)) {
+    periodCountReg := periodCountReg + 1.U
   }
 }
 
@@ -79,7 +94,6 @@ class Mdio (val mainFreq: Int,
   val writeHeader= ("b" + preamble + startOfFrame + writeOPCode).U
 
   val mdioClock = Module(new MdioClock(mainFreq, targetFreq))
-  mdioClock.io.enable := 0.U
 
   //      0        1     2       3     4      5
   val sheadaddr::srta::srdata::swta::swdata::sidle::Nil = Enum(6)
@@ -90,6 +104,7 @@ class Mdio (val mainFreq: Int,
 
   switch(stateReg){
     is(sidle){
+        
     }
     is(sheadaddr){ // send preamble on mdo
     }
@@ -103,6 +118,7 @@ class Mdio (val mainFreq: Int,
     }
   }
 
+  mdioClock.io.enable := stateReg =/= sidle
 
   io.mdio.mdc := 0.U
   io.mdio.mdir := 1.U

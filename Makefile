@@ -2,7 +2,6 @@ SBT = sbt
 #BACKEND=--backend-name verilator
 VCD=--generate-vcd-output on
 
-
 hdl:
 	$(SBT) "runMain mdio.Mdio"
 
@@ -12,6 +11,9 @@ test:
 testall:
 	$(SBT) "test:testOnly mdio.MdioSpec"
 	$(SBT) "test:testOnly mdio.MdioClockSpec"
+
+cleanoutput:
+	-rm -rf output/mdio.*
 
 mrproper:
 	-rm *.anno.json
