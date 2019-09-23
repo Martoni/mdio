@@ -11,24 +11,65 @@ object general {
                   )
 }
 
+
+
 class TestMdioWriteFrame (dut: Mdio) extends PeekPokeTester(dut) {
   println("Begin of Mdio test")
-  val phyaddr = "001"
-  val regaddr = "00010"
-  val phyregaddr = Integer.parseInt(phyaddr + regaddr, 2)
-  // initialize values
-  poke(dut.io.phyreg.bits, 1)
-  poke(dut.io.phyreg.valid, 0)
-  poke(dut.io.data_i.bits, 0)
-  poke(dut.io.data_i.valid, 0)
-  poke(dut.io.data_o.ready, 0)
-  step(5)
-  // launch write frame
-  poke(dut.io.phyreg.bits, phyregaddr) 
-  poke(dut.io.phyreg.valid, 1)
-  poke(dut.io.data_i.bits, 0xcafe)
-  poke(dut.io.data_i.valid, 1)
-  step(50)
+  val phyaddr = "111"
+  val regaddr = "11111"
+  def initvalues = {
+    poke(dut.io.phyreg.bits, 1)
+    poke(dut.io.phyreg.valid, 0)
+    poke(dut.io.data_i.bits, 0)
+    poke(dut.io.data_i.valid, 0)
+    poke(dut.io.data_o.ready, 0)
+  }
+  def sendFrame(vWrite:Int, phyaddr: String = "001", regaddr: String = "00010") = {
+    expect(phyaddr.length == 3, "Wrong phyaddr")
+    expect(regaddr.length == 5, "Wrong regaddr")
+    val phyregaddr = Integer.parseInt(phyaddr + regaddr, 2)
+    var mdc_old = BigInt(0)
+    var mdc = BigInt(0)
+    var frameWriteBack = BigInt(0)
+    val frameExpectedString = ("1"*32) + "01" + "01" + "00" + phyaddr + regaddr + "10" +
+                              ("0"*16 + vWrite.toBinaryString takeRight 16) + "0"
+    println("sizeFrame " + dut.sizeFrame)
+    println("size expected " + frameExpectedString.length)
+    val frameExpected = BigInt(frameExpectedString, 2)
+    println("frameExpectedString length " + frameExpectedString.length)
+    initvalues
+    // initialize values
+    step(5)
+    // launch write frame
+    poke(dut.io.phyreg.bits, phyregaddr)
+    poke(dut.io.phyreg.valid, 1)
+    poke(dut.io.data_i.bits, vWrite)
+    poke(dut.io.data_i.valid, 1)
+    step(1)
+    initvalues // off all valid signals
+    mdc = peek(dut.io.mdio.mdc).toInt
+    mdc_old = mdc
+    for(i <- 0 until frameExpectedString.length){
+      while(!(mdc == 1 && mdc_old == 0)){
+        mdc = peek(dut.io.mdio.mdc).toInt
+        if(mdc == 1 && mdc_old == 0) { // if rising edge
+            val mdo = peek(dut.io.mdio.mdo)
+            println(f"mdo $mdo @ $t (i $i)")
+            frameWriteBack = (frameWriteBack << 1) + mdo
+        } else {
+          mdc_old = mdc
+        }
+        step(1)
+      }
+      mdc_old = mdc
+    }
+    step(70*(dut.mainFreq/dut.targetFreq))
+    println(f"frame back     0x$frameWriteBack%X")
+    println(f"Frame expected 0x$frameExpected%X")
+    expect(frameWriteBack == frameExpected, "Wrong write frame generated")
+  }
+
+  sendFrame(0x0F0F, phyaddr, regaddr)
   println("End of Mdio test")
 }
 

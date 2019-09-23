@@ -40,11 +40,10 @@ class MdioClock (val mainFreq: Int,
   val countReg = RegInit(0.U(log2Ceil(maxCount+1).W))
   val periodCountReg = RegInit(0.U(log2Ceil(maxPerCount+1).W))
 
-
   when(cValidReg){
     countReg := countReg + 1.U
     when(countReg === (halfMaxCount.U - 1.U)){
-      mdcReg := false.B 
+      mdcReg := false.B
     }.elsewhen(countReg === (maxCount.U - 1.U)){
       mdcReg := true.B
       countReg := 0.U
@@ -86,49 +85,67 @@ class Mdio (val mainFreq: Int,
 //Read  32 1’s 01   10 00AAA RRRRR Z0  DDDDDDDD_DDDDDDDD Z
 //Write 32 1’s 01   01 00AAA RRRRR 10  DDDDDDDD_DDDDDDDD Z
 
-  val preamble = "1"*32
-  val startOfFrame = "01"
-  val readOPCode = "10"
-  val writeOPCode = "01"
-  val readHeader = ("b" + preamble + startOfFrame + readOPCode).U
-  val writeHeader= ("b" + preamble + startOfFrame + writeOPCode).U
+  val preamble = ("b" + "1"*32).U(32.W)
+  val startOfFrame = "b01".U(2.W)
+  val readOPCode = "b10".U(2.W)
+  val writeOPCode = "b01".U(2.W)
+  val readHeader = preamble ## startOfFrame ## readOPCode
+  val writeHeader= preamble ## startOfFrame ## writeOPCode
+  val sizeFrame = (writeHeader ## "b00".U(2.W) ##
+                   io.phyreg.bits ## "b10".U(2.W) ##
+                   io.data_i.bits ## "b0".U(1.W)).getWidth
 
-  val mdioClock = Module(new MdioClock(mainFreq, targetFreq))
+  val mdoReg = RegInit(true.B)
+  val mdioClock = Module(new MdioClock(mainFreq, targetFreq, sizeFrame))
+  val mdioClockEnable = RegInit(false.B)
 
-  //      0        1     2       3     4      5
-  val sheadaddr::srta::srdata::swta::swdata::sidle::Nil = Enum(6)
+  //XXX: delete it
+  io.data_o.bits := 0.U
+  io.data_o.valid := 0.U
+
+  //      0        1               2       3
+  val sheadaddr::swriteframe::sreaddata::sidle::Nil = Enum(4)
   val stateReg = RegInit(sidle)
 
-  val preambleCount = RegInit(32.U)
-  val wrReg = RegInit(false.B)
+  var writeFrameReg = RegInit(0.U(sizeFrame.W))
+  var readFrameReg = RegInit(0.U(sizeFrame.W))
 
   switch(stateReg){
     is(sidle){
-        
+      when(io.phyreg.valid && io.data_i.valid){
+        stateReg := swriteframe
+        writeFrameReg := (writeHeader ## "b00".U(2.W) ##
+                          io.phyreg.bits ## "b10".U(2.W) ##
+                          io.data_i.bits ## "b0".U(1.W))
+      }
+    }
+    is(swriteframe) {
+      when(mdioClock.io.mdc_fall){
+        mdoReg := writeFrameReg(sizeFrame.U - mdioClock.io.per_count - 1.U)
+      }
+      when(mdioClock.io.mdc_rise && mdioClock.io.per_count === (sizeFrame.U - 1.U)){
+        stateReg := sidle
+      }
     }
     is(sheadaddr){ // send preamble on mdo
     }
-    is(swta){
-    }
-    is(swdata){
-    }
-    is(srta){
-    }
-    is(srdata){
+    is(sreaddata){
     }
   }
 
-  mdioClock.io.enable := stateReg =/= sidle
+  mdioClockEnable := stateReg =/= sidle
 
-  io.mdio.mdc := 0.U
-  io.mdio.mdir := 1.U
+  // mdioClock connexions
+  mdioClock.io.enable := mdioClockEnable
 
-  //XXX: delete it
-  io.mdio.mdo := 0.U
-  io.phyreg.ready := 0.U
-  io.data_o.bits := 0.U
-  io.data_o.valid:= 0.U
-  io.data_i.ready:= 0.U
+  // communication interface
+  io.phyreg.ready := stateReg === sidle
+  io.data_i.ready := stateReg === sidle
+
+  // mdio connexions
+  io.mdio.mdir:= stateReg === sheadaddr || stateReg === swriteframe
+  io.mdio.mdc := mdioClock.io.mdc
+  io.mdio.mdo := mdoReg
 }
 
 
