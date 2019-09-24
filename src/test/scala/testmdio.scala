@@ -11,12 +11,84 @@ object general {
                   )
 }
 
+class TestMdioReadFrame (dut: Mdio) extends PeekPokeTester(dut) {
+  println("Begin of Mdio read frame test")
+  val phyaddr = "001"
+  val regaddr = "00001"
 
+  def initvalues = {
+    poke(dut.io.phyreg.bits, 1)
+    poke(dut.io.phyreg.valid, 0)
+    poke(dut.io.data_i.bits, 0)
+    poke(dut.io.data_i.valid, 0)
+    poke(dut.io.data_o.ready, 0)
+  }
+  def readFrame(phyaddr: String = "001", regaddr: String = "00010",
+                value2read: Int = 0xcafe) = {
+    expect(phyaddr.length == 3, "Wrong phyaddr")
+    expect(regaddr.length == 5, "Wrong regaddr")
+    val phyregaddr = Integer.parseInt(phyaddr + regaddr, 2)
+    var frameWriteBack = BigInt(0)
+    var mdc_old = BigInt(0)
+    var mdc = BigInt(0)
+    // set phy, reg and data_o.ready
+    poke(dut.io.mdio.mdi, 1)
+    poke(dut.io.data_o.ready, 1)
+    poke(dut.io.phyreg.valid, 1)
+    poke(dut.io.phyreg.bits, phyregaddr)
+    step(1)
+    mdc = peek(dut.io.mdio.mdc).toInt
+    mdc_old = mdc
+    var ovalid = BigInt(0)
+    var dataindex = 0
+    for(i <- 0 until dut.sizeFrame){
+      while(!(mdc == 1 && mdc_old == 0) && ovalid == 0){
+        mdc = peek(dut.io.mdio.mdc).toInt
+        if(mdc == 1 && mdc_old == 0) { // if rising edge
+            val mdo = peek(dut.io.mdio.mdo)
+            frameWriteBack = (frameWriteBack << 1) + mdo
+        } else {
+          if(mdc == 0 && mdc_old == 1 && i > 48) { // if falling edge
+            if((value2read & (0x1<<(62-i))) != 0) {
+              poke(dut.io.mdio.mdi, 1)
+            } else {
+              poke(dut.io.mdio.mdi, 0)
+            }
+          }
+          mdc_old = mdc
+        }
+        step(1)
+        ovalid = peek(dut.io.data_o.valid)
+      }
+      if(ovalid == 1) {
+        poke(dut.io.data_o.ready, 0)
+      }
+      mdc_old = mdc
+    }
+    val readValue = peek(dut.io.data_o.bits)
+    initvalues
+    step(40)
+    readValue
+  }
+
+  initvalues
+
+  var value = 0xcafe
+  println(f"Read value 0x$value%X")
+  var rvalue = readFrame(phyaddr, regaddr, value)
+  expect(rvalue == value, f"Wrong value 0x$rvalue%X, should be 0x$value%X")
+
+  value = 0xdeca
+  println(f"Read value 0x$value%X")
+  rvalue = readFrame(phyaddr, regaddr, value)
+  expect(rvalue == value, f"Wrong value 0x$rvalue%X, should be 0x$value%X")
+
+}
 
 class TestMdioWriteFrame (dut: Mdio) extends PeekPokeTester(dut) {
   println("Begin of Mdio test")
-  val phyaddr = "111"
-  val regaddr = "11111"
+  val phyaddr = "001"
+  val regaddr = "00001"
   def initvalues = {
     poke(dut.io.phyreg.bits, 1)
     poke(dut.io.phyreg.valid, 0)
@@ -54,7 +126,6 @@ class TestMdioWriteFrame (dut: Mdio) extends PeekPokeTester(dut) {
         mdc = peek(dut.io.mdio.mdc).toInt
         if(mdc == 1 && mdc_old == 0) { // if rising edge
             val mdo = peek(dut.io.mdio.mdo)
-            println(f"mdo $mdo @ $t (i $i)")
             frameWriteBack = (frameWriteBack << 1) + mdo
         } else {
           mdc_old = mdc
@@ -166,10 +237,15 @@ class MdioSpec extends FlatSpec with Matchers {
   val mdioClock = 1
 
   it should "Send a simple write frame " in {
-    val args = Array("--fint-write-vcd",
-                     "--tr-vcd-show-underscored-vars") ++ general.optn
+    val args = general.optn
     chisel3.iotesters.Driver.execute(args, () => new Mdio(mainClock, mdioClock))
           {c => new TestMdioWriteFrame(c)} should be(true)
   }
 
+  it should "Send a simple read frame with right data " in {
+    val args = Array("--fint-write-vcd",
+                     "--tr-vcd-show-underscored-vars") ++ general.optn
+    chisel3.iotesters.Driver.execute(args, () => new Mdio(mainClock, mdioClock))
+          {c => new TestMdioReadFrame(c)} should be(true)
+  }
 }

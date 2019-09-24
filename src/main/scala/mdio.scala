@@ -83,7 +83,9 @@ class Mdio (val mainFreq: Int,
 // Notes: MDIO format
 //           sheadaddr             sta     sdata        sidle
 //Read  32 1’s 01   10 00AAA RRRRR Z0  DDDDDDDD_DDDDDDDD Z
+//Dir   32 1's 11   11 11111 11111 00  00000000 00000000 0
 //Write 32 1’s 01   01 00AAA RRRRR 10  DDDDDDDD_DDDDDDDD Z
+//Dir   32 1's 11   11 11111 11111 11  11111111 11111111 0
 
   val preamble = ("b" + "1"*32).U(32.W)
   val startOfFrame = "b01".U(2.W)
@@ -94,17 +96,19 @@ class Mdio (val mainFreq: Int,
   val sizeFrame = (writeHeader ## "b00".U(2.W) ##
                    io.phyreg.bits ## "b10".U(2.W) ##
                    io.data_i.bits ## "b0".U(1.W)).getWidth
+  val sizeHeader = (writeHeader ## "b00".U(2.W) ## io.phyreg.bits).getWidth
+
 
   val mdoReg = RegInit(true.B)
   val mdioClock = Module(new MdioClock(mainFreq, targetFreq, sizeFrame))
   val mdioClockEnable = RegInit(false.B)
 
+  val dataOValidReg = RegInit(false.B)
+  val dataOReg = RegInit(0.U(16.W))
   //XXX: delete it
-  io.data_o.bits := 0.U
-  io.data_o.valid := 0.U
 
-  //      0        1               2       3
-  val sheadaddr::swriteframe::sreaddata::sidle::Nil = Enum(4)
+  //      0        1               2       3        4
+  val sheadaddr::swriteframe::sreaddata::sidle::sreadidle::Nil = Enum(5)
   val stateReg = RegInit(sidle)
 
   var writeFrameReg = RegInit(0.U(sizeFrame.W))
@@ -112,11 +116,18 @@ class Mdio (val mainFreq: Int,
 
   switch(stateReg){
     is(sidle){
+      dataOValidReg := 0.U
+      dataOReg := 0.U
       when(io.phyreg.valid && io.data_i.valid){
         stateReg := swriteframe
         writeFrameReg := (writeHeader ## "b00".U(2.W) ##
                           io.phyreg.bits ## "b10".U(2.W) ##
                           io.data_i.bits ## "b0".U(1.W))
+      }
+      when(io.phyreg.valid && io.data_o.ready && !io.data_i.valid) {
+        stateReg := sheadaddr
+        readFrameReg :=  (readHeader ## "b00".U(2.W) ##
+                          io.phyreg.bits ## "b0".U((2+16+1).W))
       }
     }
     is(swriteframe) {
@@ -128,19 +139,39 @@ class Mdio (val mainFreq: Int,
       }
     }
     is(sheadaddr){ // send preamble on mdo
+      when(mdioClock.io.mdc_fall){
+        mdoReg := readFrameReg(sizeFrame.U - mdioClock.io.per_count - 1.U)
+      }
+      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === (sizeHeader.U - 1.U)){
+        stateReg := sreaddata
+      }
     }
     is(sreaddata){
+      when(mdioClock.io.mdc_rise && mdioClock.io.per_count >= (sizeFrame.U - 18.U)){
+        dataOReg := dataOReg(14, 0) ## io.mdio.mdi
+      }
+      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === (sizeFrame.U - 2.U)){
+        stateReg := sreadidle
+        dataOValidReg := true.B
+      }
+    }
+    is(sreadidle){
+      dataOValidReg := false.B
+      when(mdioClock.io.mdc_rise){
+        stateReg := sidle
+      }
     }
   }
 
-  mdioClockEnable := stateReg =/= sidle
-
   // mdioClock connexions
+  mdioClockEnable := stateReg =/= sidle
   mdioClock.io.enable := mdioClockEnable
 
   // communication interface
   io.phyreg.ready := stateReg === sidle
   io.data_i.ready := stateReg === sidle
+  io.data_o.valid := dataOValidReg
+  io.data_o.bits := dataOReg
 
   // mdio connexions
   io.mdio.mdir:= stateReg === sheadaddr || stateReg === swriteframe
