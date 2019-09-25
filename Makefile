@@ -15,7 +15,7 @@ testall:
 cleanoutput:
 	-rm -rf output/mdio.*
 
-mrproper:
+mrproper: cleanoutput
 	-rm *.anno.json
 	-rm *.fir
 	-rm *.v
