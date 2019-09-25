@@ -6,11 +6,12 @@ hdl:
 	$(SBT) "runMain mdio.Mdio"
 
 test:
-	$(SBT) "test:testOnly mdio.MdioSpec"
+	$(SBT) "test:testOnly mdio.MdioWbSpec"
 
 testall:
-	$(SBT) "test:testOnly mdio.MdioSpec"
 	$(SBT) "test:testOnly mdio.MdioClockSpec"
+	$(SBT) "test:testOnly mdio.MdioSpec"
+	$(SBT) "test:testOnly mdio.MdioWbSpec"
 
 cleanoutput:
 	-rm -rf output/mdio.*

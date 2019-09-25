@@ -85,6 +85,11 @@ class TestMdioReadFrame (dut: Mdio) extends PeekPokeTester(dut) {
 
 }
 
+class TestMdioWbRead(dut: MdioWb) extends PeekPokeTester(dut) {
+  println("Begin of MdioWbRead test")
+  true
+}
+
 class TestMdioWriteFrame (dut: Mdio) extends PeekPokeTester(dut) {
   println("Begin of Mdio test")
   val phyaddr = "001"
@@ -247,5 +252,17 @@ class MdioSpec extends FlatSpec with Matchers {
                      "--tr-vcd-show-underscored-vars") ++ general.optn
     chisel3.iotesters.Driver.execute(args, () => new Mdio(mainClock, mdioClock))
           {c => new TestMdioReadFrame(c)} should be(true)
+  }
+}
+
+class MdioWbSpec extends FlatSpec with Matchers {
+  behavior of "A MdioWb"
+  val mainClock = 5
+  val mdioClock = 1
+
+  it should "Read its version in register " in {
+    val args = general.optn
+    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
+          {c => new TestMdioWbRead(c)} should be(true)
   }
 }
