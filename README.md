@@ -24,9 +24,9 @@ with:
 
 ### control
 
-	bit  | 15  |  ...   | 7..5 | 4..0
-	---- |---- | ------ | ---- | ----
-	name |  R  |  void  | aphy | areg
+ bit  | 15  |  ...   | 7..5 | 4..0
+ ---- |---- | ------ | ---- | ----
+ name |  R  |  void  | aphy | areg
 
 with:
 - R: read bit, must be set to emit read frame
@@ -35,16 +35,15 @@ with:
 
 ### readData
 
-	bit  | 15 .. 0 
-	---- | -------
-	name | readData
-
+ bit  | 15 .. 0 
+ ---- | -------
+ name | readData
 
 ### writeData
 
-	bit  | 15 .. 0 
-	---- | -------
-	name | writeData
+ bit  | 15 .. 0 
+ ---- | -------
+ name | writeData
 
 ## tests
 
