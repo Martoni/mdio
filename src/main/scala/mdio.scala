@@ -13,18 +13,6 @@ class MdioIf extends Bundle {
   val mdir = Output(Bool()) // /
 }
 
-// Wishbone slave interface
-class WbSlave (private val dwidth: Int,
-               private val awidth: Int) extends Bundle {
-  val adr_i = Input(UInt(awidth.W))
-  val dat_i = Input(UInt(dwidth.W))
-  val dat_o = Output(UInt(dwidth.W))
-  val we_i = Input(Bool())
-  val stb_i = Input(Bool())
-  val ack_o = Output(Bool())
-  val cyc_i = Input(Bool())
-}
-
 // module that generate mdio clock (MDC)
 class MdioClock (val mainFreq: Int,
                  val targetFreq: Int,
@@ -81,21 +69,6 @@ class MdioClock (val mainFreq: Int,
   when(risingedge(mdcReg)) {
     periodCountReg := periodCountReg + 1.U
   }
-}
-
-class MdioWb(val mainFreq: Int,
-             val targetFreq: Int) extends Module {
-  val io = IO(new Bundle {
-    val mdio = new MdioIf()
-    val wbs = new WbSlave(16, 2)
-  })
-
-  //XXX delete this :
-  io.mdio.mdc := 0.U
-  io.mdio.mdo := 0.U
-  io.mdio.mdir := 0.U
-  io.wbs.dat_o := 0.U
-  io.wbs.ack_o := 0.U
 }
 
 class Mdio (val mainFreq: Int,
