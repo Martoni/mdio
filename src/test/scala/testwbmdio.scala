@@ -127,6 +127,26 @@ class TestMdioWbWriteFrame(dut: MdioWb) extends PeekPokeTester(dut){
   mdioWb.writeMdio(phy, reg, data)
 }
 
+class TestMdioWbWriteReadFrame(dut: MdioWb) extends PeekPokeTester(dut){
+  val mdioWb = new MdioWbTest(dut)
+  poke(dut.io.mdio.mdi, 1)
+  step(1)
+  val phy = BigInt(1)
+  val reg = BigInt(10)
+  var data = BigInt(0x1234)
+  println(f"Write data 0x$data%04X")
+  mdioWb.writeMdio(phy, reg, data)
+  step(100)
+  data = mdioWb.readMdio(phy, reg)
+  println(f"read data 0x$data%04X")
+  expect(data==0xFFFF, f"Wrong data read $data%04X, should be 0xFFFF")
+  step(10)
+  poke(dut.io.mdio.mdi, 0)
+  data = mdioWb.readMdio(phy, reg)
+  println(f"read data 0x$data%04X")
+  expect(data==0, f"Wrong data read $data%04X, should be 0")
+}
+
 class TestMdioWbReadFrame(dut: MdioWb) extends PeekPokeTester(dut){
   val mdioWb = new MdioWbTest(dut)
   step(1)
@@ -156,17 +176,23 @@ class MdioWbSpec extends FlatSpec with Matchers {
   val mainClock = 5
   val mdioClock = 1
 
-//  it should "Read value in MDIO " in {
-//    val args = general.optn
-//    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
-//          {c => new TestMdioWbRead(c)} should be(true)
-//  }
+  it should "Read value in MDIO " in {
+    val args = general.optn
+    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
+          {c => new TestMdioWbRead(c)} should be(true)
+  }
 
   it should "Write mdio value sending mdio frame" in {
-    val args = Array("--fint-write-vcd",
-                     "--tr-vcd-show-underscored-vars") ++ general.optn
+    val args = general.optn
     chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
           {c => new TestMdioWbWriteFrame(c) } should be(true)
 
+  }
+
+  it should "Write mdio value then read mdio value sending two frame" in {
+    val args = Array("--fint-write-vcd",
+                     "--tr-vcd-show-underscored-vars") ++ general.optn
+    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
+          {c => new TestMdioWbWriteReadFrame(c) } should be(true)
   }
 }
