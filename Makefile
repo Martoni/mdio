@@ -2,6 +2,8 @@ SBT = sbt
 #BACKEND=--backend-name verilator
 VCD=--generate-vcd-output on
 
+SRCDIR=src/main/scala/mdio
+
 hdl:
 	$(SBT) "runMain mdio.Mdio"
 
@@ -12,6 +14,9 @@ testall:
 	$(SBT) "test:testOnly mdio.MdioClockSpec"
 	$(SBT) "test:testOnly mdio.MdioSpec"
 	$(SBT) "test:testOnly mdio.MdioWbSpec"
+
+package: $(SRCDIR)/mdio.scala $(SRCDIR)/wbmdio.scala
+	$(SBT) package
 
 cleanoutput:
 	-rm -rf output/mdio.*

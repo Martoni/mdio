@@ -1,4 +1,8 @@
+version := "1.0-rc2" 
+
 scalaVersion := "2.11.7"
+
+organization := "org.armadeus"
 
 resolvers ++= Seq(
   Resolver.sonatypeRepo("snapshots"),
