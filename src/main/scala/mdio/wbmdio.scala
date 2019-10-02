@@ -5,17 +5,7 @@ import chisel3.util._
 import chisel3.experimental._
 import chisel3.Driver
 
-// Wishbone slave interface
-class WbSlave (private val dwidth: Int,
-               private val awidth: Int) extends Bundle {
-  val adr_i = Input(UInt(awidth.W))
-  val dat_i = Input(UInt(dwidth.W))
-  val dat_o = Output(UInt(dwidth.W))
-  val we_i = Input(Bool())
-  val stb_i = Input(Bool())
-  val ack_o = Output(Bool())
-  val cyc_i = Input(Bool())
-}
+import wbplumbing.WbSlave
 
 class MdioWb(val mainFreq: Int,
              val targetFreq: Int) extends Module {

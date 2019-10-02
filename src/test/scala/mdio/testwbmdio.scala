@@ -4,6 +4,8 @@ import chisel3._
 import chisel3.iotesters.PeekPokeTester
 import org.scalatest.{Matchers, FlatSpec}
 
+import wbplumbing.WbSlave
+
 // general options are in testmdio.scala
 
 // Usefull classes
