@@ -14,6 +14,7 @@ class MdioWb(val mainFreq: Int,
     val wbs = new WbSlave(16, 2)
   })
 
+  val version = 11  // 1.1
   val dataSize = 16
 
   // plug mdio module
@@ -37,13 +38,13 @@ class MdioWb(val mainFreq: Int,
 
 /**
  * status (R):
- *  | 15 .. 1 |  0 |
- *  |---------|----|
- *  |  void   |busy| 
- *  |---------|----|
+ *  |  15..8  | 7 .. 1 |  0 |
+ *  |---------|--------|----|
+ *  | version | void   |busy|
+ *  |---------|--------|----|
  */
   val busyReg = RegInit(true.B)
-  status := "h00".U(15.W) ## busyReg
+  status := version.U(8.W) ## "h00".U(7.W) ## busyReg
 
 
 /**
@@ -108,7 +109,7 @@ class MdioWb(val mainFreq: Int,
   when(wbSm === swbread){
     switch(io.wbs.adr_i){
       is(STATUSADDR){
-        wbReadReg := status 
+        wbReadReg := status
       }
       is(CONTROLADDR){
         wbReadReg := control

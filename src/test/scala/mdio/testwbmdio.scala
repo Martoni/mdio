@@ -72,7 +72,7 @@ class MdioWbTest(dut: MdioWb) extends PeekPokeTester(dut) {
       step(1)
       retValue = wbs.wbsRead(wbs.statusAddr)
       timeOut = timeOut - 1
-    } while (timeOut != 0 && retValue != 0)
+    } while (timeOut != 0 && (retValue&0x0001) != 0)
 
     // write phy and reg address with R bit (read)
     wbs.wbsWrite(wbs.controlAddr, (BigInt(1)<<15) + addr)
@@ -82,7 +82,7 @@ class MdioWbTest(dut: MdioWb) extends PeekPokeTester(dut) {
       step(100)
       retValue = wbs.wbsRead(wbs.statusAddr)
       timeOut = timeOut - 1
-    } while (timeOut != 0 && retValue != 0)
+    } while (timeOut != 0 && (retValue&0x0001) != 0)
     
     // read value read
     retValue = wbs.wbsRead(wbs.readDataAddr)
@@ -96,13 +96,13 @@ class MdioWbTest(dut: MdioWb) extends PeekPokeTester(dut) {
     step(1)
     var addr = (aPhy<<5) + aReg
     var retValue = BigInt(1)
-    var timeOut = 10000000
+    var timeOut = 10000
     // check if not busy
     do {
       step(1)
       retValue = wbs.wbsRead(wbs.statusAddr)
       timeOut = timeOut - 1
-    } while (timeOut != 0 && retValue != 0)
+    } while (timeOut != 0 && (retValue&0x0001) != 0)
 
     // write phy and reg address
     wbs.wbsWrite(wbs.controlAddr, addr)
@@ -114,13 +114,14 @@ class MdioWbTest(dut: MdioWb) extends PeekPokeTester(dut) {
       step(100)
       retValue = wbs.wbsRead(wbs.statusAddr)
       timeOut = timeOut - 1
-    } while (timeOut != 0 && retValue != 0)
+    } while (timeOut != 0 && (retValue&0x0001) != 0)
   }
 }
 
 // Tests
 
 class TestMdioWbWriteFrame(dut: MdioWb) extends PeekPokeTester(dut){
+  println("Test Mdio Wb Write Frame")
   val mdioWb = new MdioWbTest(dut)
   step(1)
   val phy = BigInt(1)

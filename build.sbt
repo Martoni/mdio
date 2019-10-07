@@ -1,4 +1,4 @@
-version := "1.0-rc2" 
+version := "1.1" 
 
 scalaVersion := "2.11.7"
 

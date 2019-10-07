@@ -15,12 +15,13 @@ Wishbone slave is a simple 16bits data interface with 4 registers.
 
 ### status
 
- bit  |15 .. 1 |   0
- ---- |------- | ----
- name | void   | busy
+ bit  |  15..8  |  7..1 |   0
+ ---- | ------- | ----- | ----
+ name | version |  void | busy
 
 with:
-- busy: set if frame is sent
+- version in decimal without dot (1.0 -> 10)
+- busy: set if frame is sending
 
 ### control
 
@@ -35,13 +36,13 @@ with:
 
 ### readData
 
- bit  | 15 .. 0 
+ bit  | 15 .. 0
  ---- | -------
  name | readData
 
 ### writeData
 
- bit  | 15 .. 0 
+ bit  | 15 .. 0
  ---- | -------
  name | writeData
 
