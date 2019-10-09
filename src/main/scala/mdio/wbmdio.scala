@@ -78,19 +78,47 @@ class MdioWb(val mainFreq: Int,
   val writeFrameStart = RegInit(false.B)
 
   // Wishbone state machine
+  //     00       01        10
   val swbinit::swbread::swbwrite::Nil = Enum(3)
   val wbSm = RegInit(swbinit)
   val ackReg = RegInit(false.B)
   val wbReadReg = RegInit(0.U(dataSize.W))
 
   ackReg := false.B
-
+  readFrameStart := false.B
+  writeFrameStart := false.B
   switch(wbSm){
     is(swbinit){
       when(io.wbs.stb_i & io.wbs.cyc_i){
         when(io.wbs.we_i){
+          switch(io.wbs.adr_i) {
+            is(CONTROLADDR){
+              control := io.wbs.dat_i
+              when(io.wbs.dat_i(15) === true.B){
+                readFrameStart := true.B
+              }
+            }
+            is(WRITEDATAADDR){
+              writeData := io.wbs.dat_i
+              writeFrameStart := true.B
+            }
+          }
           wbSm := swbwrite
         }.otherwise {
+          switch(io.wbs.adr_i){
+            is(STATUSADDR){
+              wbReadReg := status
+            }
+            is(CONTROLADDR){
+              wbReadReg := control
+            }
+            is(READDATAADDR){
+              wbReadReg := readData
+            }
+            is(WRITEDATAADDR){
+              wbReadReg := writeData
+            }
+          }
           wbSm := swbread
         }
       }
@@ -104,42 +132,6 @@ class MdioWb(val mainFreq: Int,
   }
 
   ackReg := (wbSm === swbread) || (wbSm === swbwrite)
-
-  // read registers
-  when(wbSm === swbread){
-    switch(io.wbs.adr_i){
-      is(STATUSADDR){
-        wbReadReg := status
-      }
-      is(CONTROLADDR){
-        wbReadReg := control
-      }
-      is(READDATAADDR){
-        wbReadReg := readData
-      }
-      is(WRITEDATAADDR){
-        wbReadReg := writeData
-      }
-    }
-  }
-
-  // write registers
-  readFrameStart := false.B
-  writeFrameStart := false.B
-  when(wbSm === swbwrite){
-    switch(io.wbs.adr_i) {
-      is(CONTROLADDR){
-        control := io.wbs.dat_i
-        when(io.wbs.dat_i(15) === true.B){
-          readFrameStart := true.B
-        }
-      }
-      is(WRITEDATAADDR){
-        writeData := io.wbs.dat_i
-        writeFrameStart := true.B
-      }
-    }
-  }
 
   io.wbs.dat_o := wbReadReg
   io.wbs.ack_o := ackReg
