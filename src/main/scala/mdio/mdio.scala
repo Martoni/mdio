@@ -40,17 +40,19 @@ class MdioClock (val mainFreq: Int,
   val countReg = RegInit(0.U(log2Ceil(maxCount+1).W))
   val periodCountReg = RegInit(0.U(log2Ceil(maxPerCount+1).W))
 
+  countReg := countReg + 1.U
   when(cValidReg){
-    countReg := countReg + 1.U
     when(countReg === (halfMaxCount.U - 1.U)){
-      mdcReg := false.B
-    }.elsewhen(countReg === (maxCount.U - 1.U)){
       mdcReg := true.B
+    }.elsewhen(countReg === (maxCount.U - 1.U)){
+      mdcReg := false.B
       countReg := 0.U
     }
   }.otherwise{
-    countReg := 0.U
-    mdcReg := false.B
+    when(countReg === (maxCount.U - 1.U)){
+      countReg := 0.U
+      mdcReg := false.B
+    }
   }
 
   io.mdc := mdcReg
@@ -81,7 +83,7 @@ class Mdio (val mainFreq: Int,
   })
 
 // Notes: MDIO format
-//           sheadaddr             sta     sdata        sidle
+//           sheadaddr             sta     sdata        strail
 //Read  32 1’s 01   10 00AAA RRRRR Z0  DDDDDDDD_DDDDDDDD Z
 //Dir   32 1's 11   11 11111 11111 00  00000000 00000000 0
 //Write 32 1’s 01   01 00AAA RRRRR 10  DDDDDDDD_DDDDDDDD Z
@@ -107,8 +109,8 @@ class Mdio (val mainFreq: Int,
   val dataOReg = RegInit(0.U(16.W))
   //XXX: delete it
 
-  //      0        1               2       3        4
-  val sheadaddr::swriteframe::sreaddata::sidle::sreadidle::Nil = Enum(5)
+  //      0        1               2       3        4        5
+  val sheadaddr::swriteframe::sreaddata::sidle::sreadidle::strail::Nil = Enum(6)
   val stateReg = RegInit(sidle)
 
   var writeFrameReg = RegInit(0.U(sizeFrame.W))
@@ -134,7 +136,12 @@ class Mdio (val mainFreq: Int,
       when(mdioClock.io.mdc_fall){
         mdoReg := writeFrameReg(sizeFrame.U - mdioClock.io.per_count - 1.U)
       }
-      when(mdioClock.io.mdc_rise && mdioClock.io.per_count === (sizeFrame.U - 1.U)){
+      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === (sizeFrame.U - 1.U)){
+        stateReg := strail
+      }
+    }
+    is(strail) {
+      when(mdioClock.io.mdc_fall) {
         stateReg := sidle
       }
     }
