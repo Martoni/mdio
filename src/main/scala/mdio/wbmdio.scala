@@ -93,7 +93,8 @@ class MdioWb(val mainFreq: Int,
         when(io.wbs.we_i){
           switch(io.wbs.adr_i) {
             is(CONTROLADDR){
-              control := io.wbs.dat_i
+              aPhyReg := io.wbs.dat_i(7, 5)
+              aRegReg := io.wbs.dat_i(4, 0)
               when(io.wbs.dat_i(15) === true.B){
                 readFrameStart := true.B
               }
