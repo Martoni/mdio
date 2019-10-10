@@ -149,7 +149,7 @@ class Mdio (val mainFreq: Int,
       when(mdioClock.io.mdc_fall){
         mdoReg := readFrameReg(sizeFrame.U - mdioClock.io.per_count - 1.U)
       }
-      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === (sizeHeader.U - 1.U)){
+      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === sizeHeader.U){
         stateReg := sreaddata
       }
     }
@@ -157,7 +157,7 @@ class Mdio (val mainFreq: Int,
       when(mdioClock.io.mdc_rise && mdioClock.io.per_count >= (sizeFrame.U - 18.U)){
         dataOReg := dataOReg(14, 0) ## io.mdio.mdi
       }
-      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === (sizeFrame.U - 2.U)){
+      when(mdioClock.io.mdc_fall && mdioClock.io.per_count === (sizeFrame.U - 1.U)){
         stateReg := sreadidle
         dataOValidReg := true.B
       }

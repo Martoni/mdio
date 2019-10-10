@@ -49,7 +49,7 @@ class TestMdioReadFrame (dut: Mdio) extends PeekPokeTester(dut) {
             frameWriteBack = (frameWriteBack << 1) + mdo
         } else {
           if(mdc == 0 && mdc_old == 1 && i > 48) { // if falling edge
-            if((value2read & (0x1<<(62-i))) != 0) {
+            if((value2read & (0x1<<(63-i))) != 0) {
               poke(dut.io.mdio.mdi, 1)
             } else {
               poke(dut.io.mdio.mdi, 0)
