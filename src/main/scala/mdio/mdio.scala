@@ -118,8 +118,9 @@ class Mdio (val mainFreq: Int,
 
   switch(stateReg){
     is(sidle){
-      dataOValidReg := 0.U
+      dataOValidReg := false.B
       dataOReg := 0.U
+      mdoReg := true.B
       when(io.phyreg.valid && io.data_i.valid){
         stateReg := swriteframe
         writeFrameReg := (writeHeader ## "b00".U(2.W) ##
