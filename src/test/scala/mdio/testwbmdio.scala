@@ -108,7 +108,9 @@ class MdioWbTest(dut: MdioWb) extends PeekPokeTester(dut) {
     wbs.wbsWrite(wbs.controlAddr, addr)
     // write data value to write
     wbs.wbsWrite(wbs.writeDataAddr, aData)
-    
+   
+    step(500)
+
     // wait for writing with busy bit
     do {
       step(100)
@@ -126,7 +128,7 @@ class TestMdioWbWriteFrame(dut: MdioWb) extends PeekPokeTester(dut){
   step(1)
   val phy = BigInt(1)
   val reg = BigInt(10)
-  val data = BigInt(0x1234)
+  val data = BigInt(0x8180)
   mdioWb.writeMdio(phy, reg, data)
 }
 
@@ -179,23 +181,23 @@ class MdioWbSpec extends FlatSpec with Matchers {
   val mainClock = 5
   val mdioClock = 1
 
-  it should "Read value in MDIO " in {
-    val args = general.optn
-    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
-          {c => new TestMdioWbRead(c)} should be(true)
-  }
-
-  it should "Write mdio value sending mdio frame" in {
+  it should "Write value in MDIO" in {
     val args = general.optn
     chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
           {c => new TestMdioWbWriteFrame(c) } should be(true)
 
   }
 
-  it should "Write mdio value then read mdio value sending two frame" in {
-    val args = Array("--fint-write-vcd",
-                     "--tr-vcd-show-underscored-vars") ++ general.optn
-    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
-          {c => new TestMdioWbWriteReadFrame(c) } should be(true)
-  }
+//  it should "Read value in MDIO " in {
+//    val args = general.optn
+//    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
+//          {c => new TestMdioWbRead(c)} should be(true)
+//  }
+//
+//  it should "Write mdio value then read mdio value sending two frame" in {
+//    val args = Array("--fint-write-vcd",
+//                     "--tr-vcd-show-underscored-vars") ++ general.optn
+//    chisel3.iotesters.Driver.execute(args, () => new MdioWb(mainClock, mdioClock))
+//          {c => new TestMdioWbWriteReadFrame(c) } should be(true)
+//  }
 }
