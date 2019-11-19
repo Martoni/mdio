@@ -61,6 +61,7 @@ class MdioClock (val mainFreq: Int,
   io.per_count := periodCountReg
   when(fallingedge(io.enable) ||
     periodCountReg === maxPerCount.U){
+    periodCountReg := 0.U
     cValidReg := false.B
   }
   when(risingedge(io.enable)){
