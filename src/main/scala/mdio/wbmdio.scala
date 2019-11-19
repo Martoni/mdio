@@ -89,7 +89,7 @@ class MdioWb(val mainFreq: Int,
   writeFrameStart := false.B
   switch(wbSm){
     is(swbinit){
-      when(io.wbs.stb_i & io.wbs.cyc_i){
+      when(io.wbs.stb_i & io.wbs.cyc_i & !ackReg){
         when(io.wbs.we_i){
           switch(io.wbs.adr_i) {
             is(CONTROLADDR){
