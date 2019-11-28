@@ -22,7 +22,7 @@ class MdioWb(val mainFreq: Int,
   mdio.io.mdio <> io.mdio
 
 /** register (16bits)
- *  0x0 : status
+ *  0x0 : status
  *  0x1 : control
  *  0x2 : readData
  *  0x3 : writeData
@@ -45,7 +45,6 @@ class MdioWb(val mainFreq: Int,
  */
   val busyReg = RegInit(true.B)
   status := version.U(8.W) ## "h00".U(7.W) ## busyReg
-
 
 /**
  * control (W):
