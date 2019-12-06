@@ -11,7 +11,7 @@ class MdioWb(val mainFreq: Int,
              val targetFreq: Int) extends Module {
   val io = IO(new Bundle {
     val mdio = new MdioIf()
-    val wbs = new WbSlave(16, 2)
+    val wbs = new WbSlave(16, 2, "mdio")
   })
 
   val version = 11  // 1.1
