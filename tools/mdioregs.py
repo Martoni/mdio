@@ -52,7 +52,42 @@ class MdioRegs(object):
          9:("Restart Auto-Negotiation", {1:"Restart auto-Negotiation", 0:"Normal Operation"}, "RW/SC"),
          8:("Duplex Mode", {1:"Full-duplex", 0:"Half-duplex"}, "RW"),
          7:("Collision Test", {1:"Enable COL test", 0:"Disable COL test"}, "RW"),
-    }
+        },
+    0x01: {
+        15:("100BASE-T4", {1:"T4 capable", 0:"Not T4 capable"}, "RO"),
+        14:("100BASE-TX Full-Duplex", {1:"Capable of 100 Mbps full-duplex",
+                                       0:"Not capable of 100 Mbps full-duplex"}, "RO"),
+        13:("100BASE-TX Half-Duplex", {1:"Capable of 100 Mbps half-duplex",
+                                       0:"Not capable of 100 Mbps half-duplex"}, "RO"),
+        12:("10BASE-T Full-Duplex", {1:"Capable of 10 Mbps full-duplex",
+                                     0:"Not capable of 10 Mbps full-duplex"}, "RO"),
+        11:("10BASE-T Half-Duplex", {1:"Capable of 10 Mbps half-duplex",
+                                     0:"Not capable of 10 Mbps half-duplex"}, "RO"),
+         6:("No Preamble", {1:"Preamble suppression", 0:"Normal preamble"}, "RO"),
+         5:("Auto-Negotiation Complete", {1:"Auto-negotiation process Completed",
+                                          0:"Auto-negotiation process not Completed"}, "RO"),
+         4:("Remote Fault", {1:"Remote Fault", 0:"No Remote Fault"}, "RO"),
+         3:("Auto-Negotiation Ability", {1:"Can perform auto-negotiation",
+                                         0:"Cannot perform auto-negotiation"}, "RO"),
+         2:("Link Status", {1:"Link is up", 0:"Link is down"}, "RO"),
+         1:("Jabber Detect", {1:"Jabber detected", 0:"Jabber not detected"}, "RO"),
+         0:("Extended Capability", {1:"Support Extended Capability registers",
+                                    0:"No suppor for Capability Registers"}, "RO"),
+        },
+    0x02: None,
+    0x03: None,
+    0x04: None,
+    0x05: None,
+    0x06: None,
+    0x07: None,
+    0x08: None,
+    0x09: None,
+    0x0a: None,
+    0x0b: None,
+    0x0c: None,
+    0x0d: None,
+    0x0e: None,
+    0x0f: None,
     }
 
     def __init__(self, regnum, value, phy="ksz8081rnb"):
@@ -69,18 +104,14 @@ class MdioRegs(object):
         print(f"Register details of : '{self.desc()}'")
         descdict = self.DESC_REGS.get(self._regnum, None)
         if descdict is None:
-            raise Exception(f"No details for register number {self._regnum:0x02X}")
+            print(f"No details for register number 0x{self._regnum:02X}" +
+                    f" value 0x{self._value:04X}")
+            return
         for bitnum, bitdesc in descdict.items():
             bitvalue = (self._value>>bitnum)&0x1
             print("{:2}:{:1} -> {:25} : {:30} : ({:6})"
-                    .format(
-                        bitnum,
-                        bitvalue,
-                        bitdesc[0],
-                        bitdesc[1][bitvalue],
-                        bitdesc[2]
-                        )
-            )
+                    .format( bitnum, bitvalue, bitdesc[0],
+                        bitdesc[1][bitvalue], bitdesc[2]))
 
 
 def usage():
