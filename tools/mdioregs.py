@@ -100,9 +100,59 @@ class MdioRegs(object):
                                      "RW"),
      (4,0):("Selector Field", {"00001":"IEEE 802.3"}, "RW")
     },
-    0x05: None,
-    0x06: None,
-    0x07: None,
+    0x05: {
+        15:("Next Page", {1:"Next page capable", 0:"No next page capability"}, "RO"),
+        13:("Remote Fault", {1:"Remote fault supported",
+                             0:"No Remote Fault supported"}, "RO"),
+   (11,10):("Pause", {"00":"No pause",
+                      "10":"Asymmetric pause",
+                      "01":"Symmetric pause",
+                      "11":"Asymmetric and symmetric pause"}, "RO"),
+         9:("100BASE-T4", {1:"T4 capable", 0:"No T4 capability"}, "RO"),
+         8:("100BASE-TX Full-Duplex", {1:"100 Mbps full-duplex capable",
+                                       0:"No 100 Mbps full-duplex capability"},
+                                       "RO"),
+         7:("100BASE-TX Half-Duplex", {1:"100 Mbps half-duplex capable",
+                                       0:"No 100 Mbps half-duplex capability"},
+                                       "RO"),
+         6:("10BASE-T Full-Duplex", {1:"10 Mbps full-duplex capable",
+                                     0:"No 10 Mbps full-duplex capability"},
+                                     "RO"),
+         5:("10BASE-T Half-Duplex", {1:"10 Mbps half-duplex capable",
+                                     0:"No 10 Mbps half-duplex capability"},
+                                     "RO"),
+     (4,0):("Selector Field", {"00001":"IEEE 802.3"}, "RO")
+
+            },
+    0x06: {
+            4:("Parallel Detection Fault",
+                {1:"Fault detected by parallel detection",
+                 0:"No fault detected by parallel detection"}, "RO/LH"),
+            3:("Link Partner Next Page Able",
+                {1:"Link partner has next page capability",
+                 0:"Link partner does not have next page capability"},
+                "RO"),
+            2:("Next Page Able", {1:"Local device has next page capability",
+                                  0:"Local device does not have next page capability"},
+                                  "RO"),
+            1:("Page Received", {1:"New page received",
+                                 0:"New page not received yet"},
+                                 "RO/LH"),
+            0:("Link Partner Auto-Negotiation Able",
+                {1:"Link partner has auto-negotiation capability",
+                 0:"Link partner does not have autonegotiation capability"},
+                "RO"),
+    },
+    0x07: {
+            13:("Message Page", {1:"Message page",
+                                 0:"Unformatted page"}, "RW"),
+            12:("Acknowledge 2", {1:"Will comply with message",
+                                  0:"Cannot comply with message"}, "RW"),
+            11:("Toggle",
+                {1:"Previous value of the transmitted link code word equaled logic 1",
+                 0:"Logic 0"}, "RO"),
+        (10,0):("Message Field", {True:"11-bit wide field to encode 2048 messages"}, "RW"),
+    },
     0x08: None,
     0x09: None,
     0x0a: None,
@@ -111,6 +161,22 @@ class MdioRegs(object):
     0x0d: None,
     0x0e: None,
     0x0f: None,
+    0x10: None,
+    0x11: None,
+    0x12: None,
+    0x13: None,
+    0x14: None,
+    0x15: None,
+    0x16: None,
+    0x17: None,
+    0x18: None,
+    0x19: None,
+    0x1a: None,
+    0x1b: None,
+    0x1c: None,
+    0x1d: None,
+    0x1e: None,
+    0x1f: None,
     }
 
     def __init__(self, regnum, value, phy="ksz8081rnb"):
@@ -141,9 +207,14 @@ class MdioRegs(object):
                 bitvalue = "{:032b}".format((self._value>>bitnum[1])&bitmask)
                 bitvalue = bitvalue[-(bitnum[0] - bitnum[1] + 1):]
                 try:
-                    print("({:}:{:})[{}] -> {:25} : {:30} : ({:6})"
-                        .format( bitnum[0], bitnum[1], bitvalue, bitdesc[0],
-                            bitdesc[1][bitvalue], bitdesc[2]))
+                    if bitdesc[1].get(True, False):
+                        print("({:}:{:})[{}] -> {:25} : {:30} : ({:6})"
+                            .format( bitnum[0], bitnum[1], bitvalue, bitdesc[0],
+                                bitdesc[1][True], bitdesc[2]))
+                    else:
+                        print("({:}:{:})[{}] -> {:25} : {:30} : ({:6})"
+                            .format( bitnum[0], bitnum[1], bitvalue, bitdesc[0],
+                                bitdesc[1][bitvalue], bitdesc[2]))
                 except KeyError:
                     print("{:2}:{:2}[{}] -> {:25} : Undocumented value : ({:6})"
                         .format( bitnum[0], bitnum[1], bitvalue, bitdesc[0], bitdesc[2]))
