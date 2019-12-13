@@ -16,29 +16,29 @@ import getopt
 class MdioRegs(object):
     """ decode MDIO register
     """
-    
+
     PHYLIST = ["ksz8081rnb"]
 
     KSZ_REGS = {
         "Basic Control"                          :0x00,
-        "Basic Status"                           :0x01, 
-        "PHY Identifier 1"                       :0x02, 
-        "PHY Identifier 2"                       :0x03, 
-        "Auto-Negotiation Advertisement"         :0x04, 
-        "Auto-Negotiation Link Partner Ability"  :0x05, 
-        "Auto-Negotiation Expansion"             :0x06, 
-        "Auto-Negotiation Next Page"             :0x07, 
-        "Link Partner Next Page Ability"         :0x08, 
-        "Digital Reserved Control"               :0x10, 
-        "AFE Control 1"                          :0x11, 
-        "RXER Counter"                           :0x15, 
-        "Operation Mode Strap Override"          :0x16, 
-        "Operation Mode Strap Status"            :0x17, 
-        "Expanded Control"                       :0x18, 
-        "Interrupt Control/Status"               :0x1B, 
-        "LinkMD Control/Status"                  :0x1D, 
-        "PHY Control 1"                          :0x1E, 
-        "PHY Control 2"                          :0x1F, 
+        "Basic Status"                           :0x01,
+        "PHY Identifier 1"                       :0x02,
+        "PHY Identifier 2"                       :0x03,
+        "Auto-Negotiation Advertisement"         :0x04,
+        "Auto-Negotiation Link Partner Ability"  :0x05,
+        "Auto-Negotiation Expansion"             :0x06,
+        "Auto-Negotiation Next Page"             :0x07,
+        "Link Partner Next Page Ability"         :0x08,
+        "Digital Reserved Control"               :0x10,
+        "AFE Control 1"                          :0x11,
+        "RXER Counter"                           :0x15,
+        "Operation Mode Strap Override"          :0x16,
+        "Operation Mode Strap Status"            :0x17,
+        "Expanded Control"                       :0x18,
+        "Interrupt Control/Status"               :0x1B,
+        "LinkMD Control/Status"                  :0x1D,
+        "PHY Control 1"                          :0x1E,
+        "PHY Control 2"                          :0x1F,
     }
 
     DESC_REGS = {
@@ -49,7 +49,8 @@ class MdioRegs(object):
         12:("Auto-Negociation", {1:"Enable", 0:"Disable"}, "RW"),
         11:("Power-Down", {1:"Power down mode", 0:"Normal operation"}, "RW"),
         10:("Isolate", {1:"Electrical isolation of PHY from RMII", 0:"Normal Operation"}, "RW"),
-         9:("Restart Auto-Negotiation", {1:"Restart auto-Negotiation", 0:"Normal Operation"}, "RW/SC"),
+         9:("Restart Auto-Negotiation", {1:"Restart auto-Negotiation",
+                                         0:"Normal Operation"}, "RW/SC"),
          8:("Duplex Mode", {1:"Full-duplex", 0:"Half-duplex"}, "RW"),
          7:("Collision Test", {1:"Enable COL test", 0:"Disable COL test"}, "RW"),
         },
@@ -76,7 +77,29 @@ class MdioRegs(object):
         },
     0x02: None,
     0x03: None,
-    0x04: None,
+    0x04: {
+        15:("Next Page", {1:"Next page capable", 0:"No next page capability"}, "RW"),
+        13:("Remote Fault", {1:"Remote fault supported",
+                             0:"No Remote Fault supported"}, "RW"),
+   (11,10):("Pause", {"00":"No pause",
+                      "10":"Asymmetric pause",
+                      "01":"Symmetric pause",
+                      "11":"Asymmetric and symmetric pause"}, "RW"),
+         9:("100BASE-T4", {1:"T4 capable", 0:"No T4 capability"}, "RO"),
+         8:("100BASE-TX Full-Duplex", {1:"100 Mbps full-duplex capable",
+                                       0:"No 100 Mbps full-duplex capability"},
+                                       "RW"),
+         7:("100BASE-TX Half-Duplex", {1:"100 Mbps half-duplex capable",
+                                       0:"No 100 Mbps half-duplex capability"},
+                                       "RW"),
+         6:("10BASE-T Full-Duplex", {1:"10 Mbps full-duplex capable",
+                                     0:"No 10 Mbps full-duplex capability"},
+                                     "RW"),
+         5:("10BASE-T Half-Duplex", {1:"10 Mbps half-duplex capable",
+                                     0:"No 10 Mbps half-duplex capability"},
+                                     "RW"),
+     (4,0):("Selector Field", {"00001":"IEEE 802.3"}, "RW")
+    },
     0x05: None,
     0x06: None,
     0x07: None,
@@ -108,10 +131,25 @@ class MdioRegs(object):
                     f" value 0x{self._value:04X}")
             return
         for bitnum, bitdesc in descdict.items():
-            bitvalue = (self._value>>bitnum)&0x1
-            print("{:2}:{:1} -> {:25} : {:30} : ({:6})"
-                    .format( bitnum, bitvalue, bitdesc[0],
-                        bitdesc[1][bitvalue], bitdesc[2]))
+            if type(bitnum) is int:
+                bitvalue = (self._value>>bitnum)&0x1
+                print("{:2}[{:1}] -> {:25} : {:30} : ({:6})"
+                        .format( bitnum, bitvalue, bitdesc[0],
+                            bitdesc[1][bitvalue], bitdesc[2]))
+            elif type(bitnum) is tuple:
+                bitmask = int("1"*((bitnum[0]-bitnum[1])+1), 2)
+                bitvalue = "{:032b}".format((self._value>>bitnum[1])&bitmask)
+                bitvalue = bitvalue[-(bitnum[0] - bitnum[1] + 1):]
+                try:
+                    print("({:}:{:})[{}] -> {:25} : {:30} : ({:6})"
+                        .format( bitnum[0], bitnum[1], bitvalue, bitdesc[0],
+                            bitdesc[1][bitvalue], bitdesc[2]))
+                except KeyError:
+                    print("{:2}:{:2}[{}] -> {:25} : Undocumented value : ({:6})"
+                        .format( bitnum[0], bitnum[1], bitvalue, bitdesc[0], bitdesc[2]))
+            else:
+                print(bitnum)
+                raise Exception("Wrong format {}".format(bitnum))
 
 
 def usage():
@@ -120,7 +158,7 @@ def usage():
     print("$ python3 mdioregs.py [options]")
     print("-r, --regs=[regnum]    reg number in hex")
     print("-v, --value=[value]    value of reg in hex")
- 
+
 if __name__ == "__main__":
     if sys.version_info[0] < 3:
         raise Exception("Must be using Python 3")
@@ -148,7 +186,7 @@ if __name__ == "__main__":
         print("Please give a register number and value")
         usage()
         sys.exit()
-    
+
     mr = MdioRegs(reg, value)
     print(f"Register: {mr.desc()}")
     mr.display_decoded()
